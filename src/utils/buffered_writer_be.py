@@ -5,7 +5,7 @@ import struct
 from io import BufferedWriter, RawIOBase
 from typing import Optional
 
-from utils.padding import pad
+from ..utils.padding import pad
 
 BUF_SIZE = 8192
 

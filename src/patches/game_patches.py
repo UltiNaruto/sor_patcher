@@ -1,14 +1,14 @@
 import io
 from typing import Any
 
-from file_formats.smd import SMD
-from patches.base_patches.constants import ConstantsPatch
-from patches.base_patches.randomizer_loop import RandomizerLoop
-from patches.base_patches.skip_to_options import SkipToOptions
-from patches.base_patches.sram_patch import SRAMPatch
-from patches.base_patches.timeout_client_func import TimeoutClientFunc
-from utils.buffered_reader_be import BufferedReaderBE
-from utils.buffered_writer_be import BufferedWriterBE
+from ..file_formats.smd import SMD
+from ..patches.base_patches.constants import ConstantsPatch
+from ..patches.base_patches.randomizer_loop import RandomizerLoop
+from ..patches.base_patches.skip_to_options import SkipToOptions
+from ..patches.base_patches.sram_patch import SRAMPatch
+from ..patches.base_patches.timeout_client_func import TimeoutClientFunc
+from ..utils.buffered_reader_be import BufferedReaderBE
+from ..utils.buffered_writer_be import BufferedWriterBE
 
 
 def apply_patches(config: dict[str, Any]) -> None:

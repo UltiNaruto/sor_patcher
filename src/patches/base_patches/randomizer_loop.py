@@ -1,11 +1,11 @@
-from data.patches import (
+from ...data.patches import (
     JMP_TO_RANDOMIZER_LOOP_ADDRESS,
     JMP_TO_RANDOMIZER_LOOP_BYTES,
     RANDOMIZER_LOOP_ADDRESS,
     RANDOMIZER_LOOP_BYTES,
 )
-from file_formats.smd import SMD
-from patches import Patch
+from ...file_formats.smd import SMD
+from ...patches import Patch
 
 
 class RandomizerLoop(Patch):

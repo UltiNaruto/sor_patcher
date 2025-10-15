@@ -1,6 +1,6 @@
 from abc import ABCMeta, abstractmethod
 
-from file_formats.smd import SMD
+from ..file_formats.smd import SMD
 
 
 class Patch(metaclass=ABCMeta):

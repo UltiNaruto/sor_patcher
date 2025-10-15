@@ -1,10 +1,10 @@
 import struct
 from enum import IntEnum
 
-from utils.buffered_reader_be import BufferedReaderBE
-from utils.buffered_writer_be import BufferedWriterBE
-from utils.byteutils import replace_bytes_at
-from utils.parser import StructParser
+from ..utils.buffered_reader_be import BufferedReaderBE
+from ..utils.buffered_writer_be import BufferedWriterBE
+from ..utils.byteutils import replace_bytes_at
+from ..utils.parser import StructParser
 
 
 class SerialNumber(StructParser):

@@ -1,9 +1,9 @@
-from data.patches import (
+from ...data.patches import (
     INIT_SRAM_ADDRESS,
     INIT_SRAM_BYTES,
 )
-from file_formats.smd import RamType, SMD
-from patches import Patch
+from ...file_formats.smd import RamType, SMD
+from ...patches import Patch
 
 
 class SRAMPatch(Patch):

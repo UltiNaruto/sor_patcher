@@ -1,10 +1,10 @@
 import struct
 
-from data.patches import DATA_SECTION_ADDRESS
-from file_formats.smd import SMD
-from patches import Patch
-from utils.byteutils import replace_bytes_at
-from utils.padding import pad
+from ...data.patches import DATA_SECTION_ADDRESS
+from ...file_formats.smd import SMD
+from ...patches import Patch
+from ...utils.byteutils import replace_bytes_at
+from ...utils.padding import pad
 
 stage_table: list[dict[str, list[int|tuple[int, int]]]] = [
     # Stage 1 - Shopping Mall
