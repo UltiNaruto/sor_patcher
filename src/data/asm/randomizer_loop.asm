@@ -49,6 +49,7 @@ menu_loop:
     cmpi.b  #0x2A, (0x00FFFB0F).l    ; check if we pressed start
     bne.b   menu_loop_ret            ; if not then end the randomizer loop
     move.b  (0x00FFFF03).l, D1       ; move current stage to D1
+    addi.b  #1, D1                   ; make D1 1-indexed
     jsr     request_stage_change     ; request level change to the client
 menu_loop_ret:
     rts
@@ -99,7 +100,7 @@ entity_table_loop:
     bne.b   not_transitioning_to_stage_9
     cmpi.b  #0x19, 0x30(A4)          ; player's animation is set to left punch?
     bne.b   not_transitioning_to_stage_9
-    move.b  #8, D1
+    move.b  #9, D1
     jsr request_stage_change
 not_transitioning_to_stage_9:
 
