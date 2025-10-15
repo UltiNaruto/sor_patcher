@@ -1,4 +1,4 @@
-    ORG     $000800E0
+    ORG     $000800D8
     movem.l a6-a0/d7-d0, -(SP)       ; save all registers to stack
 ; this is used to disconnect the game from AP client every second
 ; the boolean is written back by AP client constantly
@@ -168,7 +168,7 @@ entity_is_fully_spawned:
 ; SRAM offset is always doubled and then x2 since we store
 ; objects cleared into a 16-bit flag
     lsl.l   #2, D7                   
-    addi.l  #0x00200031, D7          ; beginning of the stage object cleared table
+    addi.l  #0x00200018, D7          ; beginning of the stage object cleared table
     move.l  D7, A5                   ; copy D7 to A5
 ; fetch collected locations flag
     clr.l   D7                       ; reset D7 to 0 so we can use it for storing the flag temporarly
@@ -260,7 +260,7 @@ ingame_loop_ret:
 
 
 post_level_loop:
-    move.l  #0x00200019, A1
+    move.l  #0x0020000C, A1
     clr.l   D1                       ; reset D1 to 0 since D1 might not be clean at that point
     move.b  (0x00FFFF03).l, D1       ; move current stage to D1
     cmpi.b  #8, D1                   ; check if we just beat final boss
