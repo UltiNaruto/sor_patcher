@@ -12,8 +12,8 @@ class SRAMPatch(Patch):
         smd.header.serial_number.software_type = 'GM'
         smd.header.extra_memory.magic_number = 'RA'
         smd.header.extra_memory.ram_type = RamType.Save8BitOdd
-        smd.header.extra_memory.address_range.start = 0x200001
-        smd.header.extra_memory.address_range.end = 0x203FFF
+        smd.header.extra_memory.address_range.start = 0x200000
+        smd.header.extra_memory.address_range.end = 0x20FFFF
 
         # adds a function that initializes the SRAM if the magic word is not present
         smd.patch(

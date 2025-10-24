@@ -1,11 +1,11 @@
-    ORG     $000800D8
+    ORG     $000800B2
     movem.l a6-a0/d7-d0, -(SP)       ; save all registers to stack
 ; this is used to disconnect the game from AP client every second
 ; the boolean is written back by AP client constantly
     jsr     timeout_client_connection_func
 ; check if easy mode is on since we got unlimited lives when it is on
-    move.l  #0x000E0000, A0          ; move constants address to A0
-    cmpi.b  #0, 0x40(A0)             ; are we playing in easy mode
+    move.l  #0x000E0000, A6          ; move constants address to A6
+    cmpi.b  #0, 0x40(A6)             ; are we playing in easy mode
     beq     not_easy_mode            ; if not then skip
     move.b  #9, (0x00FFFF20).l       ; set to unlimited lives
 not_easy_mode:
@@ -39,6 +39,8 @@ timeout_client_connection_func:
     jmp     0x0007FF10
 init_sram_func:
     jmp     0x0007FF46
+fix_address:
+    jmp     0x00080088
 
 
 ; this is the menu loop it checks if we're about to load a level
@@ -62,19 +64,19 @@ menu_loop_ret:
 ; if we get denied then we don't have final boss access yet
 ingame_loop:
     cmpi.b  #0, (0x00FFFA46).l       ; check if we are not paused
-    bgt.w   ingame_loop_ret          ; if paused then end the ingame loop
+    bgt.w   paused                   ; if paused then end the ingame loop
     clr.l   D1                       ; reset D1 to 0 since D1 might not be clean at that point
     move.b  (0x00FFFF03).l, D1       ; move current stage to D1
     lsl.b   #2, D1                   ; multiply current stage by 4 to get the entry of the offset table
-    move.l  (A0, D1), A1             ; move object types pointer to A1
+    move.l  (A6, D1), A5             ; move object types pointer to A5
     addi.b  #0x20, D1                ; adds 0x20 to offset since we want objects table pointer
-    move.l  (A0, D1), A2             ; move objects pointer to A1
+    move.l  (A6, D1), A2             ; move objects pointer to A6
     subi.b  #0x20, D1                ; subtracts 0x20 from D1 to get back 4*current stage
     lsr.b   #2, D1                   ; divide 4*current stage by 4 to get back the current stage
     clr.l   D2                       ; reset D2 to 0 since D2 might not be clean at that point
-    ; get number of entity types and add 1 to A1 so that we keep
+    ; get number of entity types and add 1 to A5 so that we keep
     ; a reference to which entity types we track
-    move.b  (A1)+, D2
+    move.b  (A5)+, D2
     clr.l   D3                       ; reset D3 to 0 since D3 might not be clean at that point
     ; get number of objects and add 1 to A2 so that we keep
     ; a reference to which objects we track
@@ -97,25 +99,28 @@ entity_table_loop:
     cmpi.b  #1, (0x00FFFA56)         ; is player forced to go left?
     bne.b   not_transitioning_to_stage_9
     cmpi.w  #0x023A, 0x10(A4)        ; player is placed to break the door?
-    bne.b   not_transitioning_to_stage_9
-    cmpi.b  #0x19, 0x30(A4)          ; player's animation is set to left punch?
-    bne.b   not_transitioning_to_stage_9
+    bgt.b   not_transitioning_to_stage_9
     move.b  #9, D1
+    lea     (0x00200014).l, A0
+    move.b  #1, (0x00A130F1).l       ; enable SRAM reading/writing
+    jsr     fix_address
+    move.b  #1, (A1)                 ; set stage cleared
+    move.b  #0, (0x00A130F1).l       ; disable SRAM reading/writing
     jsr request_stage_change
 not_transitioning_to_stage_9:
 
 ; check if the entity type correspond to the current stage ones
-    clr.l   D0                       ; index = 0
+    clr.l   D7                       ; index = 0
 ent_type_check_loop:
-    cmp.b   D2, D0                   ; is it an entity type that we must check?
+    cmp.b   D2, D7                   ; is it an entity type that we must check?
     bge.w   entity_table_loop_next   ; if we're done checking the entity types of the current stage
     clr.l   D6                       ; reset D6 to 0 so we can use it for storing the flag temporarly
     move.b  (A4), D6                 ; copy content of A4 to D6
-    clr.l   D7                       ; reset D7 to 0 so we can use it for storing the flag temporarly
-    move.b  (A1, D0.l), D7           ; copy content of A4 + D0 to D7
-    cmp.b   D7, D6                   ; compare entity type of current entity with entity type of randomized objects
+    clr.l   D5                       ; reset D5 to 0 so we can use it for storing the flag temporarly
+    move.b  (A5, D7.l), D5           ; copy content of A5 + D7 to D5
+    cmp.b   D5, D6                   ; compare entity type of current entity with entity type of randomized objects
     beq     found_valid_entity_type  ; we found the entity type we were looking for
-    addi.b  #1, D0                   ; increment index
+    addi.b  #1, D7                   ; increment index
     jmp     ent_type_check_loop      ; we didn't find a valid entity type for this stage so we move to next entity
 found_valid_entity_type:
     
@@ -140,17 +145,17 @@ orig_y_pos_alr_stored:
     bne.w   entity_table_loop_next   ; then don't check yet if the location was collected
 
 ; check if the entity correspond to the current stage ones that we randomize
-    clr.l   D0                       ; index = 0
+    clr.l   D7                       ; index = 0
 entity_check_loop:
-    cmp.b   D3, D0                   ; is it an entity that we must check?
+    cmp.b   D3, D7                   ; is it an entity that we must check?
     bge.w   entity_table_loop_next   ; if we're done checking the entities of the current stage
-    move.l  0x7C(A4), D6             ; copy original position into D7
-    lsl.l   #2, D0                   ; multiply index by 4
-    move.l  (A2, D0.l), D7           ; copy content of A2 + D0 to D7
-    lsr.l   #2, D0                   ; divide 4*index by 4
-    cmp.l   D7, D6                   ; check if the original position corresponds the one in the stage entity table
+    move.l  0x7C(A4), D6             ; copy original position into D6
+    lsl.l   #2, D7                   ; multiply index by 4
+    move.l  (A2, D7.l), D5           ; copy content of A2 + D7 to D5
+    lsr.l   #2, D7                   ; divide 4*index by 4
+    cmp.l   D5, D6                   ; check if the original position corresponds the one in the stage entity table
     beq     found_valid_entity       ; we found the entity we were looking for
-    addi.b  #1, D0                   ; increment index
+    addi.b  #1, D7                   ; increment index
     jmp     entity_check_loop        ; keep going with the for loop
 found_valid_entity:
     
@@ -164,22 +169,29 @@ entity_is_fully_spawned:
 
     clr.l   D1                       ; reset D1 to 0 since D1 might not be clean at that point
     move.b  (0x00FFFF03).l, D1       ; move current stage to D1
-    move.l  D1, D7                   ; copy current stage to D7
-; SRAM offset is always doubled and then x2 since we store
-; objects cleared into a 16-bit flag
-    lsl.l   #2, D7                   
-    addi.l  #0x00200018, D7          ; beginning of the stage object cleared table
-    move.l  D7, A5                   ; copy D7 to A5
+    move.l  D1, D6                   ; copy current stage to D6
+    lsl.l   #1, D6
+    lea     (0x00200018).l, A0       ; beginning of the stage object cleared table
+    add     D6, A0                   ; copy D6 to A0
+
 ; fetch collected locations flag
-    clr.l   D7                       ; reset D7 to 0 so we can use it for storing the flag temporarly
-    move.b  (A5), D7                 ; move the upper byte of the flag to D7
-    lsl.l   #8, D7                   ; swap upper and lower byte in D7.w
-    move.b  0x2(A5), D7              ; move the lower byte of the flag to D7
-    move.l  D7, D6                   ; copy D7 to D6 since we keep D7 for updating locations cleared
+    clr.l   D0                       ; reset D0 to 0 so we can use it for storing the flag temporarly
+    move.b  #1, (0x00A130F1).l       ; enable SRAM reading/writing
+    jsr     fix_address
+    move.b  (A1), D0
+    lsl.l   #8, D0
+    addq.l  #1, A0
+    jsr     fix_address
+    move.b  (A1), D0
+    move.b  #0, (0x00A130F1).l       ; disable SRAM reading/writing
+
+    move.w  D0, (0x00FFFFF0).l       ; test
+
+    move.l  D0, D4                   ; copy D0 to D4 since we keep D4 for updating locations cleared
 ; check if we already marked this location as collected
-    lsr.w   D0, D6                   ; (D6 >> D0) & 1 to check if we collected the location already
-    andi.w  #1, D6                   ; ^
-    cmpi.w  #0, D6                   ; check if the location was collected
+    lsr.w   D7, D4                   ; (D4 >> D7) & 1 to check if we collected the location already
+    andi.w  #1, D4                   ; ^
+    cmpi.w  #0, D4                   ; check if the location was collected
     beq.b   was_not_collected        ; if not then skip destroying
 
 ; handling destroy phone booth
@@ -238,41 +250,64 @@ not_crate:
     bne.b   not_table
     move.b  #2, 0x30(A4)                 ; set to destroy
 not_table:
-    
+
     jmp entity_table_loop_next       ; do not check if we need to collect since it's already collected
 was_not_collected:
 
 ; check if we just broke the entity if so then mark it as collected in SRAM
     cmpi.b  #1, 0x30(A4)             ; is state set to alive or none?
     ble.b   entity_table_loop_next   ; if it is then move to next entity
+
+    lea     (0x00200019).l, A0       ; beginning of the stage object cleared table
+    add     D6, A0                   ; copy D6 to A0
+
     move.l  #1, D6                   ; prepare D6 for bitwise operation
-    lsl.l   D0, D6                   ; left shift D6 by D0
-    or.l    D6, D7                   ; apply (D7 | D6) to D7
-    move.b  D7, 0x2(A5)              ; move lower byte to SRAM
-    lsr.l   #8, D7                   ; right shift D7 by 8
-    move.b  D7, (A5)                 ; move upper byte to SRAM
+    lsl.l   D7, D6                   ; left shift D6 by D7
+    or.l    D6, D0                   ; apply (D0 | D6) to D0
+
+; save collected locations flag
+    move.l  #1, D4
+    move.b  #1, (0x00A130F1).l       ; enable SRAM reading/writing
+save_collected_locations_flag:
+    jsr     fix_address
+    move.b  D0, (A1)
+    lsr.l   #8, D0
+    subq.l  #1, A0
+    dbf     D4, save_collected_locations_flag
+    move.b  #0, (0x00A130F1).l       ; disable SRAM reading/writing
 
 entity_table_loop_next:
     addi.w  #0x80, A4
     jmp     entity_table_loop
+paused:
 ingame_loop_ret:
     rts
 
 
 post_level_loop:
-    move.l  #0x0020000C, A1
+    lea     (0x0020000C).l, A0
     clr.l   D1                       ; reset D1 to 0 since D1 might not be clean at that point
     move.b  (0x00FFFF03).l, D1       ; move current stage to D1
+    add     D1, A0                   ; used to set current stage to set cleared
     cmpi.b  #8, D1                   ; check if we just beat final boss
     blt.b   not_final_boss           ; if not then swap back to main menu
     move.b  #0x26, (0x00FFFF01).l    ; set menu type to main menu
     jmp     final_boss_defeated
 not_final_boss:
+    cmpi.b  #7, D1                   ; check if we just beat stage 8
+    bge.b   stage8_beaten            ; if yes then skip setting stage cleared since it's done in ingame loop
+    move.b  #1, (0x00A130F1).l       ; enable SRAM reading/writing
+    jsr     fix_address
+    move.b  #1, (A1)                 ; set stage cleared
+    move.b  #0, (0x00A130F1).l       ; disable SRAM reading/writing
+stage8_beaten:
     move.b  #0x10, (0x00FFFF01).l    ; set menu type to main menu
+    jmp     post_level_loop_ret
 final_boss_defeated:
-    lsl.b   #1, D1                   ; left shift to D1 to multiply by 2
-    move.b  #1, (A1, D1.l)           ; set stage cleared
-    lsr.b   #1, D1                   ; right shift to D1 to divide by 2
+    move.b  #1, (0x00A130F1).l       ; enable SRAM reading/writing
+    jsr     fix_address
+    move.b  #1, (A1)                 ; set stage cleared
+    move.b  #0, (0x00A130F1).l       ; disable SRAM reading/writing
 post_level_loop_ret:
     rts
 
@@ -300,3 +335,4 @@ stage_unapproved:
 stage_approved:
     move.b  #0, (0x00FFFFFD).l       ; reset request status once the response was given or aborted
     rts
+

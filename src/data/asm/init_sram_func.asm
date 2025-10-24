@@ -1,107 +1,122 @@
     ORG     $0007FF46
     movem.l a6-a0/d7-d0, -(SP)       ; save all registers to stack
-    move.l  #0x000E0000, A0          ; move constants address to A0
-    move.l  #0x00200000, A1          ; pointer to SRAM
-    ; reading 32-bit magic word in SRAM
-    clr.l   D0
+    move.b  #1, (0x00A130F1).l       ; enable SRAM reading/writing
+
+    lea     (0x001FFFFF).l, A0       ; load SRAM memory into A0
+    move.l  #3, D7
+read_magic_word:
+    jsr     fix_address
     move.b  (A1), D0
     lsl.l   #8, D0
-    move.b  0x1(A1), D0
-    lsl.l   #8, D0
-    move.b  0x2(A1), D0
-    lsl.l   #8, D0
-    move.b  0x3(A1), D0
+    addq.l  #1, A0
+    dbf     D7, read_magic_word
+    jsr     fix_address
+    move.b  (A1), D0
+
     cmpi.l  #0x534F5231, D0          ; check if save is initialized
     beq.w   end_of_func              ; SRAM is initialized so return
 
-    move.l  #0x0020002D, A1          ; pointer to SRAM at the offset of seed name
     ; for loop to reset the seed name
-    clr.l   D0                       ;
-    move.l  0x44(A0), D1             ; length of seed name
+    lea     (0x000E0048).l, A2       ; move constants address to A0
+    lea     (0x0020002C).l, A0       ; pointer to SRAM at the offset of seed name
+    move.l  #0x3F, D0
 reset_seed_name:
-    cmpi.b  #0x40, D0                ;
-    beq     resetted_seed_name       ;
-    andi.l  #0x000000FF, D2          ;
-    move.l  A1, A2                   ;
-    add.l   D0, A2                   ;
-    cmp.b   D1, D0                   ;
-    bge     fill_with_zeros          ;
-    move.b  0x48(A0, D0.l), D2       ;
-    move.b  D2, (A2)                 ;
-    addi.l  #1, D0                   ;
-    jmp     reset_seed_name          ;
-fill_with_zeros:
-    move.b  #0, (A2)                 ;
-    addi.l  #1, D0                   ;
-    jmp     reset_seed_name          ;
-resetted_seed_name:
-    move.l  #0x00200000, A1          ; pointer to SRAM
+    move.b  (A2)+, D1
+    jsr     fix_address
+    move.b  D1, (A1)
+    addq.l  #1, A0
+    dbf     D0, reset_seed_name
     ; end of for loop
 
+    lea     (0x000E0000).l, A2       ; move constants address to A1
+
     ; write seed name length to SRAM
-    move.b  D1, 0x2C(A1)
-    lsr.b   #8, D1
-    move.b  D1, 0x2B(A1)
-    ; write deaths to SRAM
-    move.b  #0, 0x2A(A1)
-    ; write death link out to SRAM
-    move.b  #0, 0x29(A1)
-    ; write death link in to SRAM
-    move.b  #0, 0x28(A1)
-    ; write stage objects cleared (stage 6/7) to SRAM
-    move.b  #0, 0x27(A1)
-    move.b  #0, 0x26(A1)
-    move.b  #0, 0x25(A1)
-    move.b  #0, 0x24(A1)
-    ; write stage objects cleared (stage 5/6) to SRAM
-    move.b  #0, 0x23(A1)
-    move.b  #0, 0x22(A1)
-    move.b  #0, 0x21(A1)
-    move.b  #0, 0x20(A1)
-    ; write stage objects cleared (stage 3/4) to SRAM
-    move.b  #0, 0x1F(A1)
-    move.b  #0, 0x1E(A1)
-    move.b  #0, 0x1D(A1)
-    move.b  #0, 0x1C(A1)
-    ; write stage objects cleared (stage 1/2) to SRAM
-    move.b  #0, 0x1B(A1)
-    move.b  #0, 0x1A(A1)
-    move.b  #0, 0x19(A1)
-    move.b  #0, 0x18(A1)
-    ; write filler to SRAM
-    move.b  #0xFF, 0x17(A1)
-    move.b  #0xFF, 0x16(A1)
-    move.b  #0xFF, 0x15(A1)
-    ; write final boss cleared to SRAM
-    move.b  #0, 0x14(A1)
-    ; write stages uncleared (5 to 8) to SRAM
-    move.b  #0, 0x13(A1)
-    move.b  #0, 0x12(A1)
-    move.b  #0, 0x11(A1)
-    move.b  #0, 0x10(A1)
-    ; write stages uncleared (1 to 4) to SRAM
-    move.b  #0, 0x0F(A1)
-    move.b  #0, 0x0E(A1)
-    move.b  #0, 0x0D(A1)
-    move.b  #0, 0x0C(A1)
-    ; write last received item to SRAM
-    move.b  #0xFF, 0x0B(A1)
-    move.b  #0xFF, 0x0A(A1)
-    move.b  #0xFF, 0x09(A1)
-    move.b  #0xFF, 0x08(A1)
+    move.l  0x44(A2), D0             ; read length of seed name
+    lea     (0x0020002B).l, A0
+    move.l  #1, D7
+write_seed_name_length:
+    jsr     fix_address
+    move.b  D0, (A1)
+    lsr.l   #8, D0
+    subq.l  #1, A0
+    dbf     D7, write_seed_name_length
+
+    lea     (0x00200018).l, A0
+    move.l  #18, D0
+loop:
+    jsr     fix_address
+    move.b  #0, (A1)
+    addq.l  #1, A0
+    dbf     D0, loop
+
+    lea     (0x00200015).l, A0
+    move.l  #2, D0
+loop2:
+    jsr     fix_address
+    move.b  #0xFF, (A1)
+    addq.l  #1, A0
+    dbf     D0, loop2
+
+    lea     (0x0020000C).l, A0
+    move.l  #8, D0
+loop3:
+    jsr     fix_address
+    move.b  #0, (A1)
+    addq.l  #1, A0
+    dbf     D0, loop3
+
+    lea     (0x00200006).l, A0
+    move.l  #5, D0
+loop4:
+    jsr     fix_address
+    move.b  #0xFF, (A1)
+    addq.l  #1, A0
+    dbf     D0, loop4
+
     ; write slot number to SRAM
-    clr.l   D0
-    move.b  0x43(A0), D0
-    move.b  D0, 0x07(A1)
-    move.b  0x42(A0), D0
-    move.b  D0, 0x06(A1)
-    move.b  #0, 0x05(A1)
-    move.b  #0, 0x04(A1)
-    ; write magic number to SRAM
-    move.b  #0x31, 0x03(A1)
-    move.b  #0x52, 0x02(A1)
-    move.b  #0x4F, 0x01(A1)
-    move.b  #0x53, (A1)
+    lea     (0x00200005).l, A0
+    move.w  0x42(A2), D0             ; read length of seed name
+    move.l  #1, D7
+write_slot_number:
+    jsr     fix_address
+    move.b  D0, (A1)
+    lsr.l   #8, D0
+    subq.l  #1, A0
+    dbf     D7, write_slot_number
+
+    ; write magic word SOR1 to SRAM
+    lea     (0x00200003).l, A0
+    move.l  #0x534F5231, D0          ; write string SOR1 to D1
+    move.l  #3, D7
+write_magic_word:
+    jsr     fix_address
+    move.b  D0, (A1)
+    lsr.l   #8, D0
+    subq.l  #1, A0
+    dbf     D7, write_magic_word
+
 end_of_func:
+    move.b  #0, (0x00A130F1).l       ; disable SRAM reading/writing
     movem.l (SP)+, d0-d7/a0-a6       ; load all registers from stack
     rts
+
+fix_address:
+    move.l  D0, -(SP)                ; backup D0 to stack
+
+    move.l  A0, A1
+    move.l  A1, D0
+    subi.l  #0x00200000, D0
+    divu    #2, D0
+    clr.w   D0
+    swap    D0
+    cmpi.l  #1, D0
+    beq.b   odd_address
+    addq.l  #1, A1
+    jmp     end_of_fix_address
+odd_address:
+    subq.l  #1, A1
+end_of_fix_address:
+    move.l  (SP)+, D0                ; restore D0 from stack
+    rts
+
+

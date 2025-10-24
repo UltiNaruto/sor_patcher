@@ -169,7 +169,7 @@ class ConstantsPatch(Patch):
         # Seed name (length + data)
         constants += struct.pack('>I', len(self.seed_name))
         constants += bytes(self.seed_name, 'utf-8')
-        constants += b'\x00' * pad(len(constants), 4)
+        constants += b'\x00' * (64 - len(self.seed_name))
 
         # stage datas (will be used in vblank loop to write to SRAM when we are ingame)
         for i in range(stage_count):
