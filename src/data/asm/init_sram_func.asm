@@ -18,7 +18,7 @@ read_magic_word:
 
     ; for loop to reset the seed name
     lea     (0x000E0048).l, A2       ; move constants address to A0
-    lea     (0x0020002C).l, A0       ; pointer to SRAM at the offset of seed name
+    lea     (0x0020002D).l, A0       ; pointer to SRAM at the offset of seed name
     move.l  #0x3F, D0
 reset_seed_name:
     move.b  (A2)+, D1
@@ -32,7 +32,7 @@ reset_seed_name:
 
     ; write seed name length to SRAM
     move.l  0x44(A2), D0             ; read length of seed name
-    lea     (0x0020002B).l, A0
+    lea     (0x0020002C).l, A0
     move.l  #1, D7
 write_seed_name_length:
     jsr     fix_address
