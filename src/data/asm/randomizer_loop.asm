@@ -50,6 +50,7 @@ menu_loop:
     bne.b   menu_loop_ret            ; if not then end the randomizer loop
     cmpi.b  #0x2A, (0x00FFFB0F).l    ; check if we pressed start
     bne.b   menu_loop_ret            ; if not then end the randomizer loop
+    clr.l   D1                       ; reset D1 to 0
     move.b  (0x00FFFF03).l, D1       ; move current stage to D1
     addi.b  #1, D1                   ; make D1 1-indexed
     jsr     request_stage_change     ; request level change to the client
@@ -94,19 +95,28 @@ entity_table_loop:
     ; check if we are destroying the door to final boss in stage 8
     cmpi.b  #7, D1                   ; stage 8?
     bne.b   not_transitioning_to_stage_9
+    cmpi.b  #1, (0x00FFFFFD).l       ; stage 9?
+    beq.b   not_transitioning_to_stage_9
     cmpi.b  #2, (A4)                 ; is this a player?
     bgt.b   not_transitioning_to_stage_9
-    cmpi.b  #1, (0x00FFFA56)         ; is player forced to go left?
-    bne.b   not_transitioning_to_stage_9
-    cmpi.w  #0x023A, 0x10(A4)        ; player is placed to break the door?
+    cmpi.w  #0x0238, 0x10(A4)        ; player is at door?
+    blt.b   not_transitioning_to_stage_9
+    cmpi.w  #0x023A, 0x10(A4)        ; player is at door?
     bgt.b   not_transitioning_to_stage_9
-    move.b  #9, D1
-    lea     (0x00200014).l, A0
+    cmpi.b  #1, (0x00FFFA56).l       ; is player forced to go left?
+    bne.b   not_transitioning_to_stage_9
+    cmpi.b  #9, (0x00FFFFFD).l       ; is transitioning to stage 9?
+    beq.b   transitioning_to_stage_9
     move.b  #1, (0x00A130F1).l       ; enable SRAM reading/writing
+    lea     (0x00200013).l, A0
     jsr     fix_address
     move.b  #1, (A1)                 ; set stage cleared
     move.b  #0, (0x00A130F1).l       ; disable SRAM reading/writing
+    move.b  #9, D1
     jsr request_stage_change
+    move.w  #0x237, 0x10(A4)
+transitioning_to_stage_9:
+    jmp ingame_loop_ret
 not_transitioning_to_stage_9:
 
 ; check if the entity type correspond to the current stage ones
@@ -184,8 +194,6 @@ entity_is_fully_spawned:
     jsr     fix_address
     move.b  (A1), D0
     move.b  #0, (0x00A130F1).l       ; disable SRAM reading/writing
-
-    move.w  D0, (0x00FFFFF0).l       ; test
 
     move.l  D0, D4                   ; copy D0 to D4 since we keep D4 for updating locations cleared
 ; check if we already marked this location as collected
@@ -289,13 +297,16 @@ post_level_loop:
     clr.l   D1                       ; reset D1 to 0 since D1 might not be clean at that point
     move.b  (0x00FFFF03).l, D1       ; move current stage to D1
     add     D1, A0                   ; used to set current stage to set cleared
-    cmpi.b  #8, D1                   ; check if we just beat final boss
-    blt.b   not_final_boss           ; if not then swap back to main menu
-    move.b  #0x26, (0x00FFFF01).l    ; set menu type to main menu
+    cmpi.b  #7, D1                   ; check if we just beat stage 8
+    bne.b   not_final_boss           ; if not then swap back to main menu
+    cmpi.b  #1, (0x00FFFFFC).l       ; check if we just beat final boss
+    bne.b   not_final_boss           ; if not then swap back to main menu
+    move.b  #0x24, (0x00FFFF01).l    ; set menu type to main menu
+    move.l  #0x00200014, A0          ; set A0 to stage 9 clear
     jmp     final_boss_defeated
 not_final_boss:
     cmpi.b  #7, D1                   ; check if we just beat stage 8
-    bge.b   stage8_beaten            ; if yes then skip setting stage cleared since it's done in ingame loop
+    beq.b   stage8_beaten            ; if yes then skip setting stage cleared since it's done in ingame loop
     move.b  #1, (0x00A130F1).l       ; enable SRAM reading/writing
     jsr     fix_address
     move.b  #1, (A1)                 ; set stage cleared
@@ -309,25 +320,22 @@ final_boss_defeated:
     move.b  #1, (A1)                 ; set stage cleared
     move.b  #0, (0x00A130F1).l       ; disable SRAM reading/writing
 post_level_loop_ret:
+    move.b  #0, (0x00FFFFFC).l       ; disable on final boss
     rts
 
 
 request_stage_change:
-    cmpi.b  #0x9, D1                 ; check for current stage
-    bgt.b   stage_unapproved         ; if current stage > 9
+    cmpi.b  #0x9, D1                 ; if current stage > 9
+    bgt.b   stage_unapproved         ; then stage_unapproved
     move.b  D1, (0x00FFFFFD).l       ; requested stage to connect to
 wait_for_client:
-; this is used to disconnect the game from AP client every second
-; the boolean is written back by AP client constantly
-    jsr     timeout_client_connection_func
-    cmpi.b  #0, (0x00FFFFFE).l       ; while connected
-    beq.b   stage_unapproved         ; still connected so we try again to wait
-    move.l  #120, D0                 ; check for 120 CPU cycles for reply
-wait_for_client:
+    cmpi.b  #0, (0x00FFFFFE).l       ; check if still connected
+    beq.b   stage_unapproved         ; if not then move to stage_unapproved
     cmpi.b  #0, (0x00FFFFFD).l       ; while request status is still on request mode
     ble.b   request_got_reply        ; stage selection was approved so we end the loop
-    dbf     D0, wait_for_client      ; loop to get reply
-    move.b  #0xFF, (0x00FFFFFD).l    ; timed out so cancel
+    jsr     timeout_client_connection_func
+    jmp     wait_for_client          ; loop to get reply
+    move.b  #0, (0x00FFFFFD).l       ; timed out so cancel
 request_got_reply:
     cmpi.b  #0, (0x00FFFFFD).l       ; was the request not approved?
     beq.b   stage_unapproved         ; if so then cancel stage loading
@@ -336,6 +344,10 @@ request_got_reply:
 stage_unapproved:
     move.b  #0x10, (0x00FFFF00).l    ; set menu type to main menu
 stage_approved:
+    cmpi.b  #9, D1
+    blt.b   requested_not_final_boss
+    move.b  #1, (0x00FFFFFC).l       ; enable on final boss
+requested_not_final_boss:
     move.b  #0, (0x00FFFFFD).l       ; reset request status once the response was given or aborted
     rts
 
