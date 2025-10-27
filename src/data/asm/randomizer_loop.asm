@@ -313,9 +313,8 @@ post_level_loop_ret:
 
 
 request_stage_change:
-    cmpi.b  #0x8, D1                 ; check for current stage
-    bge.b   stage_unapproved         ; if current stage > 8
-    addi.b  #1, D1                   ; current stage is 0-indexed so we switch it to 1-indexed
+    cmpi.b  #0x9, D1                 ; check for current stage
+    bgt.b   stage_unapproved         ; if current stage > 9
     move.b  D1, (0x00FFFFFD).l       ; requested stage to connect to
 wait_for_client:
 ; this is used to disconnect the game from AP client every second
@@ -323,12 +322,16 @@ wait_for_client:
     jsr     timeout_client_connection_func
     cmpi.b  #0, (0x00FFFFFE).l       ; while connected
     beq.b   stage_unapproved         ; still connected so we try again to wait
-    move.b  (0x00FFFFFD).l, D1       ; move request status to D2
-    cmpi.b  #0, D1                   ; while request status is still on request mode (aka D1 is stage number)
-    bgt.b   wait_for_client          ; stage selection was approved so we end the loop
-    cmpi.b  #0, D1                   ; was the request not approved?
+    move.l  #120, D0                 ; check for 120 CPU cycles for reply
+wait_for_client:
+    cmpi.b  #0, (0x00FFFFFD).l       ; while request status is still on request mode
+    ble.b   request_got_reply        ; stage selection was approved so we end the loop
+    dbf     D0, wait_for_client      ; loop to get reply
+    move.b  #0xFF, (0x00FFFFFD).l    ; timed out so cancel
+request_got_reply:
+    cmpi.b  #0, (0x00FFFFFD).l       ; was the request not approved?
     beq.b   stage_unapproved         ; if so then cancel stage loading
-    cmpi.b  #0xFF, D1                ; was the request approved?
+    cmpi.b  #0xFF, (0x00FFFFFD).l    ; was the request approved?
     beq.b   stage_approved           ; if so then stage is loading
 stage_unapproved:
     move.b  #0x10, (0x00FFFF00).l    ; set menu type to main menu

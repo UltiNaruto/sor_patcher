@@ -8,14 +8,14 @@
     move.w  (0x00FFFFF8).l, D0        ; move last timed out frame to D0
     move.w  (0x00FFFB08).l, D1        ; move current frame to D1
     sub.w   D0, D1                    ; D0 - D1
-    cmpi.w  #120, D1                  ; check delta
-    bge.b   disconnect_AP             ; if delta > 2 seconds
+    cmpi.w  #300, D1                  ; check delta
+    bge.b   disconnect_AP             ; if delta > 5 seconds
     jmp     end_of_timeout_func       ; continue to randomizer loop
 disconnect_AP:
     move.b  #0, (0x00FFFFFE).l        ; reset AP connected state
     move.w  (0x00FFFB08).l, D1        ; move current frame to D1
     move.w  D1, (0x00FFFFF8).l        ; save last frame that we timed out
-    move.l  #60, D0                   ; 60 CPU cycles
+    move.l  #120, D0                  ; 120 CPU cycles
 wait_for_reconnect:
     cmpi.b  #1, (0x00FFFFFE).l        ; check if connected
     beq.b   end_of_timeout_func       ; if we're connected then resume
