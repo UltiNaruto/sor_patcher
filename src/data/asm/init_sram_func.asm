@@ -1,4 +1,4 @@
-    ORG     $0007FF46
+    ORG     $0007FF6C
     movem.l a6-a0/d7-d0, -(SP)       ; save all registers to stack
     move.b  #1, (0x00A130F1).l       ; enable SRAM reading/writing
 

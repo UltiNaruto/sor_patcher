@@ -1,4 +1,4 @@
-    ORG     $000800B2
+    ORG     $000800D8
     movem.l a6-a0/d7-d0, -(SP)       ; save all registers to stack
 ; this is used to disconnect the game from AP client every second
 ; the boolean is written back by AP client constantly
@@ -38,9 +38,9 @@ end_of_randomizer_loop:
 timeout_client_connection_func:
     jmp     0x0007FF10
 init_sram_func:
-    jmp     0x0007FF46
+    jmp     0x0007FF6C
 fix_address:
-    jmp     0x00080088
+    jmp     0x000800AE
 
 
 ; this is the menu loop it checks if we're about to load a level
