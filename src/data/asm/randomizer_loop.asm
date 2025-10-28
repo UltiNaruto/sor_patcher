@@ -288,6 +288,12 @@ entity_table_loop_next:
     addi.w  #0x80, A4
     jmp     entity_table_loop
 paused:
+    move.b  (0x00FFFC04).l, D0       ; store buttons state in D0
+    lsr.b   #5, D0                   ; isolate C button in D0
+    andi.b  #1, D0                   ; ^
+    cmpi.b  #1, D0                   ; checking if we pressed C button
+    bne.b   ingame_loop_ret          ; if not then jump over
+    move.b  #0x10, (0x00FFFF01).l    ; set menu type to main menu
 ingame_loop_ret:
     rts
 
