@@ -441,6 +441,7 @@ request_stage_change:
     cmpi.b  #1, D0                     ; check if we have the key
     beq.b   has_key                    ; if we have the key then we can load the stage
     move.b  #0x22, (0x00FFFB0F).l      ; set menu state to stage select
+    move.b  #0xBA, (0x00FFF00A).l      ; play menu select SFX
     jmp     end_of_request_stage       ; done with requesting a change
 has_key:
     move.b  #1, (0x00FFFF18).l         ; set to 1 player mode
