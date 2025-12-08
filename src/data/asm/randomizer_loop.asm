@@ -74,10 +74,17 @@ menu_loop:
 skip_drawing_ap_infos:
     cmpi.b  #0x2A, (0x00FFFB0F).l      ; check if we pressed start
     bne.b   menu_loop_ret              ; if not then end the menu loop
+    cmpi.b  #0x26, (0x00FFFFFF).l      ; check if we were on exit
+    beq.b   cancel_exit                ; if yes then cancel the button press and reset screen
+    cmpi.b  #0x28, (0x00FFFFFF).l      ; check if we were on exit (pressed)
+    beq.b   cancel_exit                ; if yes then cancel the button press and reset screen
     cmpi.b  #0x22, (0x00FFFFFF).l      ; check if we were on stage select
     bne.b   cancel_start_press         ; if not then cancel the button press
     move.b  (0x00FFFF03).l, D1         ; move current stage to D1
     jsr     request_stage_change       ; request level change to the client
+    jmp     menu_loop_ret              ; end the menu loop
+cancel_exit:
+    move.b  #0x10, (0x00FFFF01).l      ; set menu type to main menu
     jmp     menu_loop_ret              ; end the menu loop
 cancel_start_press:
     move.b  (0x00FFFFFF).l, D1         ; backup menu state to D1
